@@ -22,7 +22,12 @@ The application supports uploading, listing, searching, sorting, previewing, and
   - PDFs
   - Text files
 - Streaming downloads (memory-safe)
-- Displays file title, size, upload date and time
+- Delete documents
+- Displays:
+  - File title
+  - File size
+  - Upload date and time
+- Shows total storage used across all uploaded documents
 
 ---
 
@@ -66,8 +71,15 @@ Query parameters:
 - `sort_by` (date, title, type)
 - `sort_order` (asc, desc)
 
+Returns:
+- Paginated document list
+- Total storage used
+
 ### GET `/documents/{id}/download`
-Streams the file to the client for download or preview.
+Streams the file to the client.
+
+### DELETE `/documents/{id}`
+Deletes the document metadata and removes the file from disk.
 
 ---
 
@@ -113,10 +125,12 @@ http://localhost:5173
 1. Open the frontend in the browser
 2. Upload one or more files
 3. View upload progress
-4. Search documents by title
-5. Sort documents by date, title, or type
-6. Preview supported file types
-7. Download files using streaming
+4. See total storage used at the top of the page
+5. Search documents by title
+6. Sort documents by date, title, or type
+7. Preview supported file types (images, PDFs, text files)
+8. Download files using streaming
+9. Delete documents when no longer needed
 
 ---
 
@@ -156,7 +170,8 @@ This would significantly reduce backend load.
 - Drag-and-drop uploads
 - Chunked uploads for very large files
 - Previews for additional file formats
-- Better error handling and retry mechanisms
+- Soft delete or versioning for documents
+- Improved error handling and retry mechanisms
 
 ---
 
@@ -165,6 +180,7 @@ This would significantly reduce backend load.
 - Authentication and authorization are out of scope
 - Metadata is stored in JSON for simplicity
 - Local disk storage is used instead of cloud storage
+- Duplicate filenames are not versioned; newer uploads overwrite files on disk
 - Focus was on clarity, correctness, and explainability rather than feature breadth
 
 ---

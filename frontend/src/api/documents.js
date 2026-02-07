@@ -23,3 +23,10 @@ export async function fetchDocuments({ page, pageSize, q, sortBy, sortOrder }) {
   const res = await fetch(`${BASE_URL}/documents?${params}`);
   return res.json();
 }
+
+export async function deleteDocument(id) {
+  return fetch(`${BASE_URL}/documents/${id}`, {
+    method: "DELETE"
+  });
+}
+

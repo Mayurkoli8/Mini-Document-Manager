@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { fetchDocuments } from "../api/documents";
 import PreviewModal from "./PreviewModal";
+import { deleteDocument } from "../api/documents";
+
 
 export default function DocumentList({ refreshKey }) {
   const [docs, setDocs] = useState([]);
@@ -10,10 +12,17 @@ export default function DocumentList({ refreshKey }) {
   const [sortOrder, setSortOrder] = useState("desc");
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [totalSize, setTotalSize] = useState(0);
 
-  useEffect(() => {
-    load();
-  }, [page, sortBy, sortOrder, refreshKey]);
+
+useEffect(() => {
+  load();
+}, [page, sortBy, sortOrder, q, refreshKey]);
+
+useEffect(() => {
+  setPage(1);
+}, [q, sortBy, sortOrder]);
+
 
   async function load() {
     setLoading(true);
@@ -25,11 +34,18 @@ export default function DocumentList({ refreshKey }) {
       sortOrder
     });
     setDocs(data.items);
+    setTotalSize(data.total_size);
     setLoading(false);
   }
 
   return (
     <>
+    <div className="card">
+  <strong>
+    Total Storage Used: {(totalSize / (1024 * 1024)).toFixed(2)} MB
+  </strong>
+</div>
+
       <div className="card">
         <input
           placeholder="Search by title"
@@ -71,6 +87,21 @@ export default function DocumentList({ refreshKey }) {
           <a href={`http://localhost:8000/documents/${doc.id}/download`}>
             <button className="primary">Download</button>
           </a>
+
+        <button
+  className="secondary"
+  onClick={async () => {
+  await deleteDocument(doc.id);
+  if (preview?.id === doc.id) {
+    setPreview(null);
+  }
+  load();
+}}
+>
+  Delete
+</button>
+
+
         </div>
       ))}
 

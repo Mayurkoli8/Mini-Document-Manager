@@ -1,11 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from uuid import uuid4
 from datetime import datetime
 import json
 import os
 
-from app.models.document import Document
 from app.services.storage import save_file
 
 router = APIRouter()
@@ -29,7 +28,7 @@ async def upload_documents(files: list[UploadFile] = File(...)):
     documents = load_documents()
 
     for file in files:
-        filename, size, _ = save_file(file)
+        filename, size = save_file(file)
 
         doc = {
             "id": str(uuid4()),
@@ -49,6 +48,7 @@ def list_documents(
     page: int = 1,
     page_size: int = 10,
     q: str | None = None,
+    sort_by: str = "date",
     sort_order: str = "desc"
 ):
     documents = load_documents()
@@ -56,16 +56,27 @@ def list_documents(
     if q:
         documents = [d for d in documents if q.lower() in d["title"].lower()]
 
-    documents.sort(
-        key=lambda d: d["uploaded_at"],
-        reverse=(sort_order == "desc")
-    )
+    reverse = sort_order == "desc"
 
+    if sort_by == "title":
+        documents.sort(key=lambda d: d["title"].lower(), reverse=reverse)
+    elif sort_by == "type":
+        documents.sort(
+            key=lambda d: os.path.splitext(d["title"])[1].lower(),
+            reverse=reverse
+        )
+    else:
+        documents.sort(key=lambda d: d["uploaded_at"], reverse=reverse)
+
+    page = max(page, 1)
     start = (page - 1) * page_size
     end = start + page_size
 
+    total_size = sum(d["size"] for d in documents)
+
     return {
         "total": len(documents),
+        "total_size": total_size,
         "items": documents[start:end]
     }
 
@@ -78,6 +89,8 @@ def download_document(doc_id: str):
         raise HTTPException(status_code=404, detail="Document not found")
 
     file_path = os.path.join("app/uploads", doc["filename"])
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File missing on server")
 
     def file_stream():
         with open(file_path, "rb") as f:
@@ -91,3 +104,20 @@ def download_document(doc_id: str):
             "Content-Disposition": f'attachment; filename="{doc["title"]}"'
         }
     )
+
+@router.delete("/documents/{doc_id}")
+def delete_document(doc_id: str):
+    documents = load_documents()
+    doc = next((d for d in documents if d["id"] == doc_id), None)
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    file_path = os.path.join("app/uploads", doc["filename"])
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    documents = [d for d in documents if d["id"] != doc_id]
+    save_documents(documents)
+
+    return {"message": "Document deleted successfully"}
